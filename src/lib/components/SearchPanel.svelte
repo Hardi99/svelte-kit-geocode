@@ -177,46 +177,49 @@
 		</div>
 	</div>
 
-	<!-- ── Reverse mode hint ───────────────────────────── -->
-	{#if mapStore.isReverseMode}
-		<p class="hint-text" transition:fly={{ y: -4, duration: 160 }}>
-			{t.reverseHint}
-		</p>
-	{/if}
+	<!-- ── Scrollable body (below search, never clips dropdown) ── -->
+	<div class="panel-body">
+		<!-- Reverse mode hint -->
+		{#if mapStore.isReverseMode}
+			<p class="hint-text" transition:fly={{ y: -4, duration: 160 }}>
+				{t.reverseHint}
+			</p>
+		{/if}
 
-	<!-- ── Result ─────────────────────────────────────── -->
-	{#if searchStore.selectedAddress}
-		<ResultCard address={searchStore.selectedAddress} {t} />
-		<POIControl {t} />
-	{/if}
+		<!-- Result -->
+		{#if searchStore.selectedAddress}
+			<ResultCard address={searchStore.selectedAddress} {t} />
+			<POIControl {t} />
+		{/if}
 
-	<!-- ── History ─────────────────────────────────────── -->
-	{#if searchStore.searchHistory.length > 0 && !mapStore.isReverseMode}
-		<div class="history" transition:fly={{ y: 6, duration: 180 }}>
-			<div class="history-header">
-				<div class="flex items-center gap-2">
-					<Clock size={11} class="text-[--color-text-muted]" />
-					<span class="section-label">{t.historyTitle}</span>
+		<!-- History -->
+		{#if searchStore.searchHistory.length > 0 && !mapStore.isReverseMode}
+			<div class="history" transition:fly={{ y: 6, duration: 180 }}>
+				<div class="history-header">
+					<div class="flex items-center gap-2">
+						<Clock size={11} class="text-[--color-text-muted]" />
+						<span class="section-label">{t.historyTitle}</span>
+					</div>
 				</div>
+				<ul class="history-list">
+					{#each searchStore.searchHistory as h (h.timestamp)}
+						<li class="history-item">
+							<button class="history-label" onclick={() => selectHistory(h)}>
+								<span class="truncate text-xs">{h.label}</span>
+							</button>
+							<button
+								class="history-delete"
+								onclick={() => searchStore.removeFromHistory(h.label)}
+								title="Remove"
+							>
+								<Trash2 size={10} />
+							</button>
+						</li>
+					{/each}
+				</ul>
 			</div>
-			<ul class="history-list">
-				{#each searchStore.searchHistory as h (h.timestamp)}
-					<li class="history-item">
-						<button class="history-label" onclick={() => selectHistory(h)}>
-							<span class="truncate text-xs">{h.label}</span>
-						</button>
-						<button
-							class="history-delete"
-							onclick={() => searchStore.removeFromHistory(h.label)}
-							title="Remove"
-						>
-							<Trash2 size={10} />
-						</button>
-					</li>
-				{/each}
-			</ul>
-		</div>
-	{/if}
+		{/if}
+	</div>
 </aside>
 
 <style>
@@ -226,13 +229,21 @@
 		left: 20px;
 		z-index: 10;
 		width: 340px;
-		max-height: calc(100vh - 40px);
 		border-radius: 14px;
 		padding: 20px;
 		display: flex;
 		flex-direction: column;
 		gap: 16px;
+		/* overflow visible so the dropdown is never clipped */
+		overflow: visible;
+	}
+
+	.panel-body {
+		display: flex;
+		flex-direction: column;
+		gap: 16px;
 		overflow-y: auto;
+		max-height: calc(100vh - 160px);
 	}
 
 	/* ── Header ─────────────────────────────────────── */
@@ -465,7 +476,9 @@
 			right: 0;
 			width: 100%;
 			border-radius: 0 0 14px 14px;
-			max-height: 60vh;
+		}
+		.panel-body {
+			max-height: calc(60vh - 120px);
 		}
 	}
 </style>
