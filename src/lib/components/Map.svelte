@@ -32,7 +32,7 @@
 	onMount(() => {
 		map = new maplibregl.Map({
 			container,
-			style: `https://api.maptiler.com/maps/dataviz/style.json?key=${PUBLIC_MAPTILER_KEY}`,
+			style: `https://api.maptiler.com/maps/streets/style.json?key=${PUBLIC_MAPTILER_KEY}`,
 			center: [2.3522, 48.8566],
 			zoom: 12,
 			attributionControl: false
