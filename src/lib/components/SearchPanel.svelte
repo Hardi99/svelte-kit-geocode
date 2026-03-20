@@ -1,11 +1,9 @@
 <script lang="ts">
 	import { fly } from 'svelte/transition';
 	import { Search, Loader2, Crosshair, Clock, Trash2, Globe, X } from 'lucide-svelte';
-	import { isochroneStore } from '$lib/stores/isochroneStore.svelte';
 	import { poisStore } from '$lib/stores/poisStore.svelte';
 	import Dropdown from './Dropdown.svelte';
 	import ResultCard from './ResultCard.svelte';
-	import IsochroneControl from './IsochroneControl.svelte';
 	import POIControl from './POIControl.svelte';
 	import { searchAddress } from '$lib/api/adresse';
 	import type { AddressFeature } from '$lib/types';
@@ -102,7 +100,6 @@
 		query = '';
 		suggestions = [];
 		searchStore.clearSelection();
-		isochroneStore.clear();
 		poisStore.clear();
 		inputEl?.focus();
 	}
@@ -190,7 +187,6 @@
 	<!-- ── Result ─────────────────────────────────────── -->
 	{#if searchStore.selectedAddress}
 		<ResultCard address={searchStore.selectedAddress} {t} />
-		<IsochroneControl {t} />
 		<POIControl {t} />
 	{/if}
 

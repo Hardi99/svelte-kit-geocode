@@ -8,7 +8,7 @@
 	interface Props { t: Labels }
 	let { t }: Props = $props();
 
-	const isFr = $derived(t.isoFoot === 'À pied');
+	const isFr = $derived(t.poiClear === 'Effacer');
 
 	/* ── Auto-compute when open or radius changes ─────── */
 	$effect(() => {

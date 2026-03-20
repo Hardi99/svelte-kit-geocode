@@ -6,7 +6,6 @@
 	import { setMap, mapStore } from '$lib/stores/mapStore.svelte';
 	import { reverseGeocode } from '$lib/api/adresse';
 	import { searchStore } from '$lib/stores/searchStore.svelte';
-	import { isochroneStore, ISOCHRONE_COLORS } from '$lib/stores/isochroneStore.svelte';
 	import { poisStore } from '$lib/stores/poisStore.svelte';
 
 	interface Props {
@@ -47,33 +46,6 @@
 
 		map.on('load', () => {
 			mapStore.setMapLoaded(true);
-
-			/* ── Isochrone layers ───────────────────────── */
-			const emptyCollection: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] };
-
-			// Find first symbol layer to insert below labels
-			const firstSymbolId = map.getStyle().layers.find((l) => l.type === 'symbol')?.id;
-
-			map.addSource('isochrone', { type: 'geojson', data: emptyCollection });
-
-			const colorExpr: maplibregl.ExpressionSpecification = [
-				'match', ['get', 'contour'],
-				5,  ISOCHRONE_COLORS[5],
-				10, ISOCHRONE_COLORS[10],
-				15, ISOCHRONE_COLORS[15],
-				'#ffffff'
-			];
-
-			map.addLayer({
-				id: 'isochrone-fill',
-				type: 'fill',
-				source: 'isochrone',
-				paint: {
-					'fill-color': colorExpr,
-					'fill-opacity': 0,
-					'fill-opacity-transition': { duration: 600, delay: 0 }
-				}
-			}, firstSymbolId);
 
 			/* ── POI layers ─────────────────────────────── */
 			const emptyPOI: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] };
@@ -116,17 +88,6 @@
 				popup.remove();
 			});
 
-			map.addLayer({
-				id: 'isochrone-line',
-				type: 'line',
-				source: 'isochrone',
-				paint: {
-					'line-color': colorExpr,
-					'line-width': 1.5,
-					'line-opacity': 0,
-					'line-opacity-transition': { duration: 600, delay: 0 }
-				}
-			}, firstSymbolId);
 		});
 
 		/* ── Reverse geocoding on click ─────────────────── */
@@ -180,31 +141,6 @@
 		source?.setData(geojson);
 	});
 
-	/* ── Sync isochrone data to map layers ──────────────── */
-	$effect(() => {
-		const data = isochroneStore.data;
-		if (!map || !mapStore.mapLoaded) return;
-
-		const source = map.getSource('isochrone') as maplibregl.GeoJSONSource;
-		if (!source) return;
-
-		if (data) {
-			source.setData(data);
-			// Fade in after data is set
-			setTimeout(() => {
-				map.setPaintProperty('isochrone-fill', 'fill-opacity',
-					['match', ['get', 'contour'], 5, 0.32, 10, 0.22, 15, 0.14, 0]
-				);
-				map.setPaintProperty('isochrone-line', 'line-opacity',
-					['match', ['get', 'contour'], 5, 0.9, 10, 0.75, 15, 0.6, 0]
-				);
-			}, 50);
-		} else {
-			source.setData({ type: 'FeatureCollection', features: [] });
-			map.setPaintProperty('isochrone-fill', 'fill-opacity', 0);
-			map.setPaintProperty('isochrone-line', 'line-opacity', 0);
-		}
-	});
 </script>
 
 <div bind:this={container} class="map-container"></div>
