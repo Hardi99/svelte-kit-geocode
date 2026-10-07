@@ -87,7 +87,14 @@ class POIStore {
 		this.pois = [];
 
 		try {
-			const pois = await fetchPOIs(lng, lat, this.radius, controller.signal);
+			let pois: POIFeature[];
+			try {
+				pois = await fetchPOIs(lng, lat, this.radius, controller.signal);
+			} catch (e) {
+				/* Public Overpass instances are flaky: retry once */
+				if (controller.signal.aborted) throw e;
+				pois = await fetchPOIs(lng, lat, this.radius, controller.signal);
+			}
 			if (!controller.signal.aborted) this.pois = pois;
 		} catch {
 			if (!controller.signal.aborted) this.error = true;

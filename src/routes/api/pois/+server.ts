@@ -10,12 +10,12 @@ const ENDPOINTS = [
 ];
 
 const ALLOWED_RADII = [300, 500, 1000];
-const TIMEOUT_MS = 12_000;
+const TIMEOUT_MS = 8_000;
 
 function buildQuery(lat: number, lng: number, r: number): string {
 	const around = `(around:${r},${lat},${lng})`;
 	return `
-[out:json][timeout:20];
+[out:json][timeout:8];
 (
   node["amenity"~"^(restaurant|cafe|fast_food|bar|pub)$"]${around};
   node["amenity"~"^(pharmacy|hospital|doctors|dentist|clinic)$"]${around};
