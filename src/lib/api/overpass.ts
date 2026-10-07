@@ -36,28 +36,13 @@ function detectCategory(tags: Record<string, string>): POICategory | null {
 export async function fetchPOIs(
 	lng: number,
 	lat: number,
-	radius: number
+	radius: number,
+	signal?: AbortSignal
 ): Promise<POIFeature[]> {
-	const r = radius;
-	const query = `
-[out:json][timeout:20];
-(
-  node["amenity"~"restaurant|cafe|fast_food|bar|pub"](around:${r},${lat},${lng});
-  node["amenity"~"pharmacy|hospital|doctors|dentist|clinic"](around:${r},${lat},${lng});
-  node["amenity"="bank"](around:${r},${lat},${lng});
-  node["amenity"="atm"](around:${r},${lat},${lng});
-  node["highway"="bus_stop"](around:${r},${lat},${lng});
-  node["railway"~"station|tram_stop|subway_entrance"](around:${r},${lat},${lng});
-  node["shop"~"supermarket|convenience|bakery"](around:${r},${lat},${lng});
-  node["amenity"~"school|university|college|kindergarten|library"](around:${r},${lat},${lng});
-);
-out body 200;
-`.trim();
-
-	const res = await fetch('https://overpass-api.de/api/interpreter', {
-		method: 'POST',
-		body: query
-	});
+	/* Proxied through our server route: avoids CORS issues and lets the
+	   server fall back to other Overpass instances */
+	const params = new URLSearchParams({ lat: String(lat), lng: String(lng), radius: String(radius) });
+	const res = await fetch(`/api/pois?${params}`, { signal });
 
 	if (!res.ok) throw new Error(`Overpass error: ${res.status}`);
 	const json = await res.json();

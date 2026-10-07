@@ -42,6 +42,7 @@ class POIStore {
 	radius             = $state<RadiusOption>(500);
 	pois               = $state<POIFeature[]>([]);
 	visibleCategories  = $state<POICategory[]>(Object.keys(POI_CATEGORIES) as POICategory[]);
+	#controller: AbortController | null = null;
 
 	/* Counts per category */
 	get counts(): Record<POICategory, number> {
@@ -76,16 +77,22 @@ class POIStore {
 	}
 
 	async compute(lng: number, lat: number): Promise<void> {
+		/* Cancel any in-flight request so a stale response can't overwrite this one */
+		this.#controller?.abort();
+		const controller = new AbortController();
+		this.#controller = controller;
+
 		this.loading = true;
 		this.error = false;
 		this.pois = [];
 
 		try {
-			this.pois = await fetchPOIs(lng, lat, this.radius);
+			const pois = await fetchPOIs(lng, lat, this.radius, controller.signal);
+			if (!controller.signal.aborted) this.pois = pois;
 		} catch {
-			this.error = true;
+			if (!controller.signal.aborted) this.error = true;
 		} finally {
-			this.loading = false;
+			if (this.#controller === controller) this.loading = false;
 		}
 	}
 }
