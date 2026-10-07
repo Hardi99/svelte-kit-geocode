@@ -1,32 +1,29 @@
 import { error, json } from '@sveltejs/kit';
+import { env } from '$env/dynamic/private';
 import type { RequestHandler } from './$types';
 
-/* Overpass instances, tried in order until one answers */
-const ENDPOINTS = [
-	'https://overpass-api.de/api/interpreter',
-	'https://overpass.private.coffee/api/interpreter',
-	'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
-	'https://overpass.kumi.systems/api/interpreter'
+const ALLOWED_RADII = [300, 500, 1000];
+
+/* One request per group, so dense categories (restaurants) can't crowd out the others */
+const CATEGORY_GROUPS = [
+	'catering.restaurant,catering.cafe,catering.fast_food,catering.bar,catering.pub',
+	'healthcare',
+	'service.financial.bank,service.financial.atm',
+	'public_transport',
+	'commercial.supermarket,commercial.convenience,commercial.food_and_drink.bakery',
+	'education.school,education.university,education.college,education.library,childcare.kindergarten'
 ];
 
-const ALLOWED_RADII = [300, 500, 1000];
-const TIMEOUT_MS = 8_000;
+const LIMIT_PER_GROUP = 40;
 
-function buildQuery(lat: number, lng: number, r: number): string {
-	const around = `(around:${r},${lat},${lng})`;
-	return `
-[out:json][timeout:8];
-(
-  node["amenity"~"^(restaurant|cafe|fast_food|bar|pub)$"]${around};
-  node["amenity"~"^(pharmacy|hospital|doctors|dentist|clinic)$"]${around};
-  node["amenity"~"^(bank|atm)$"]${around};
-  node["highway"="bus_stop"]${around};
-  node["railway"~"^(station|tram_stop|subway_entrance)$"]${around};
-  node["shop"~"^(supermarket|convenience|bakery)$"]${around};
-  node["amenity"~"^(school|university|college|kindergarten|library)$"]${around};
-);
-out body 200;
-`.trim();
+interface GeoapifyFeature {
+	properties: {
+		place_id: string;
+		name?: string;
+		categories: string[];
+		lat: number;
+		lon: number;
+	};
 }
 
 export const GET: RequestHandler = async ({ url, fetch }) => {
@@ -37,30 +34,45 @@ export const GET: RequestHandler = async ({ url, fetch }) => {
 	if (!Number.isFinite(lat) || Math.abs(lat) > 90 || !Number.isFinite(lng) || Math.abs(lng) > 180)
 		error(400, 'Invalid coordinates');
 	if (!ALLOWED_RADII.includes(radius)) error(400, 'Invalid radius');
+	if (!env.GEOAPIFY_API_KEY) error(500, 'GEOAPIFY_API_KEY is not set');
 
-	const body = new URLSearchParams({ data: buildQuery(lat, lng, radius) });
+	const apiKey = env.GEOAPIFY_API_KEY;
 
-	for (const endpoint of ENDPOINTS) {
-		try {
-			const res = await fetch(endpoint, {
-				method: 'POST',
-				body,
-				headers: {
-					'User-Agent': 'svelte-kit-geocode (https://svelte-kit-geocode.vercel.app)',
-					Accept: 'application/json'
-				},
-				signal: AbortSignal.timeout(TIMEOUT_MS)
+	const results = await Promise.all(
+		CATEGORY_GROUPS.map(async (categories) => {
+			const params = new URLSearchParams({
+				categories,
+				filter: `circle:${lng},${lat},${radius}`,
+				bias: `proximity:${lng},${lat}`,
+				limit: String(LIMIT_PER_GROUP),
+				apiKey
 			});
-			if (!res.ok) continue;
-			const data = await res.json();
-			return json(
-				{ elements: data.elements ?? [] },
-				{ headers: { 'Cache-Control': 'public, max-age=3600, s-maxage=86400' } }
-			);
-		} catch {
-			/* timeout / network error → next instance */
-		}
-	}
+			const res = await fetch(`https://api.geoapify.com/v2/places?${params}`, {
+				signal: AbortSignal.timeout(10_000)
+			}).catch(() => null);
+			if (!res?.ok) return null;
+			return ((await res.json()) as { features: GeoapifyFeature[] }).features;
+		})
+	);
 
-	error(502, 'All Overpass instances failed');
+	/* Partial results are fine; fail only if every group failed */
+	if (results.every((r) => r === null)) error(502, 'Geoapify error');
+
+	/* A place can match several groups: keep one copy */
+	const features = [
+		...new Map(results.flatMap((r) => r ?? []).map((f) => [f.properties.place_id, f])).values()
+	];
+
+	return json(
+		{
+			places: features.map(({ properties: p }) => ({
+				id: p.place_id,
+				name: p.name,
+				categories: p.categories,
+				lat: p.lat,
+				lon: p.lon
+			}))
+		},
+		{ headers: { 'Cache-Control': 'public, max-age=3600, s-maxage=86400' } }
+	);
 };

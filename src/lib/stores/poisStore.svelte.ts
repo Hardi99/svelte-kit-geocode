@@ -1,4 +1,4 @@
-import { fetchPOIs, type POIFeature } from '$lib/api/overpass';
+import { fetchPOIs, type POIFeature } from '$lib/api/pois';
 
 export type POICategory = 'food' | 'health' | 'bank' | 'transport' | 'shopping' | 'education';
 
@@ -87,14 +87,7 @@ class POIStore {
 		this.pois = [];
 
 		try {
-			let pois: POIFeature[];
-			try {
-				pois = await fetchPOIs(lng, lat, this.radius, controller.signal);
-			} catch (e) {
-				/* Public Overpass instances are flaky: retry once */
-				if (controller.signal.aborted) throw e;
-				pois = await fetchPOIs(lng, lat, this.radius, controller.signal);
-			}
+			const pois = await fetchPOIs(lng, lat, this.radius, controller.signal);
 			if (!controller.signal.aborted) this.pois = pois;
 		} catch {
 			if (!controller.signal.aborted) this.error = true;
