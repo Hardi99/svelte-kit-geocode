@@ -4,6 +4,25 @@ import type { RequestHandler } from './$types';
 
 const ALLOWED_RADII = [300, 500, 1000];
 
+/* Same coverage as api-adresse.data.gouv.fr: mainland France + overseas departments.
+   [minLat, maxLat, minLng, maxLng] */
+const FRANCE_BOUNDS: [number, number, number, number][] = [
+	[41.3, 51.2, -5.3, 9.7], // Metropolitan France + Corsica
+	[15.8, 16.6, -61.9, -60.9], // Guadeloupe
+	[17.8, 18.2, -63.2, -62.7], // Saint-Martin, Saint-Barthélemy
+	[14.3, 14.9, -61.3, -60.8], // Martinique
+	[2.1, 5.8, -54.6, -51.6], // French Guiana
+	[-21.4, -20.8, 55.2, 55.9], // Réunion
+	[-13.1, -12.6, 44.9, 45.4], // Mayotte
+	[46.7, 47.2, -56.5, -56.1] // Saint-Pierre-et-Miquelon
+];
+
+function inFrance(lat: number, lng: number): boolean {
+	return FRANCE_BOUNDS.some(
+		([minLat, maxLat, minLng, maxLng]) => lat >= minLat && lat <= maxLat && lng >= minLng && lng <= maxLng
+	);
+}
+
 /* One request per group, so dense categories (restaurants) can't crowd out the others.
    Explicit subcategories: broad parents ("healthcare") are several times slower on Geoapify */
 const CATEGORY_GROUPS = [
@@ -32,8 +51,8 @@ export const GET: RequestHandler = async ({ url, fetch }) => {
 	const lng = Number(url.searchParams.get('lng'));
 	const radius = Number(url.searchParams.get('radius'));
 
-	if (!Number.isFinite(lat) || Math.abs(lat) > 90 || !Number.isFinite(lng) || Math.abs(lng) > 180)
-		error(400, 'Invalid coordinates');
+	if (!Number.isFinite(lat) || !Number.isFinite(lng)) error(400, 'Invalid coordinates');
+	if (!inFrance(lat, lng)) error(400, 'Coordinates outside France');
 	if (!ALLOWED_RADII.includes(radius)) error(400, 'Invalid radius');
 	if (!env.GEOAPIFY_API_KEY) error(500, 'GEOAPIFY_API_KEY is not set');
 

@@ -36,8 +36,13 @@ export async function fetchPOIs(
 	radius: number,
 	signal?: AbortSignal
 ): Promise<POIFeature[]> {
-	/* Proxied through our server route, which holds the Geoapify API key */
-	const params = new URLSearchParams({ lat: String(lat), lng: String(lng), radius: String(radius) });
+	/* Proxied through our server route, which holds the Geoapify API key.
+	   Coordinates rounded to ~10 m so nearby searches share the same cached response */
+	const params = new URLSearchParams({
+		lat: lat.toFixed(4),
+		lng: lng.toFixed(4),
+		radius: String(radius)
+	});
 	const res = await fetch(`/api/pois?${params}`, { signal });
 
 	if (!res.ok) throw new Error(`POI error: ${res.status}`);
