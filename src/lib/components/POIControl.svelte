@@ -8,7 +8,6 @@
 	interface Props { t: Labels }
 	let { t }: Props = $props();
 
-	const isFr = $derived(t.poiClear === 'Effacer');
 
 	/* ── Auto-compute when open or radius changes ─────── */
 	$effect(() => {
@@ -91,7 +90,7 @@
 								style="--cat-color: {cat.color}"
 							>
 								<span class="cat-dot" style="background:{cat.color}"></span>
-								<span class="cat-name">{isFr ? cat.label.fr : cat.label.en}</span>
+								<span class="cat-name">{cat.label[searchStore.lang]}</span>
 								<span class="cat-count">{count}</span>
 							</button>
 						{/if}

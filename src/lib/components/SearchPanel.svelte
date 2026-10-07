@@ -19,23 +19,31 @@
 	let activeIndex = $state(-1);
 	let inputEl: HTMLInputElement;
 	let debounceTimer: ReturnType<typeof setTimeout>;
+	let searchController: AbortController | null = null;
 
 	/* ── Debounced search ───────────────────────────────── */
 	function handleInput() {
 		clearTimeout(debounceTimer);
+		/* Cancel the in-flight request so a slow, older response can't overwrite newer suggestions */
+		searchController?.abort();
 		activeIndex = -1;
 
 		if (query.length < 3) {
 			suggestions = [];
+			loading = false;
 			return;
 		}
 
 		loading = true;
 		debounceTimer = setTimeout(async () => {
+			const controller = new AbortController();
+			searchController = controller;
 			try {
-				suggestions = await searchAddress(query);
+				suggestions = await searchAddress(query, controller.signal);
+			} catch {
+				if (!controller.signal.aborted) suggestions = [];
 			} finally {
-				loading = false;
+				if (searchController === controller) loading = false;
 			}
 		}, 300);
 	}

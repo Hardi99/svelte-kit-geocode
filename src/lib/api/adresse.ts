@@ -2,11 +2,11 @@ import type { AddressFeature } from '$lib/types';
 
 const BASE = 'https://api-adresse.data.gouv.fr';
 
-export async function searchAddress(query: string): Promise<AddressFeature[]> {
+export async function searchAddress(query: string, signal?: AbortSignal): Promise<AddressFeature[]> {
 	if (query.length < 3 || query.length > 200) return [];
 
 	const url = `${BASE}/search/?q=${encodeURIComponent(query)}&type=housenumber&limit=7`;
-	const res = await fetch(url);
+	const res = await fetch(url, { signal });
 	if (!res.ok) throw new Error(`API error: ${res.status}`);
 
 	const data = await res.json();

@@ -74,17 +74,15 @@
 			});
 
 			map.on('mouseenter', 'poi-circles', (e) => {
-				map.getCanvas().style.cursor = 'pointer';
 				const f = e.features?.[0];
 				if (!f) return;
 				popup
 					.setLngLat((f.geometry as GeoJSON.Point).coordinates as [number, number])
-					.setHTML(`<span>${f.properties?.name ?? 'POI'}</span>`)
+					.setText(f.properties?.name ?? 'POI')
 					.addTo(map);
 			});
 
 			map.on('mouseleave', 'poi-circles', () => {
-				map.getCanvas().style.cursor = '';
 				popup.remove();
 			});
 
@@ -113,8 +111,11 @@
 		});
 
 		/* ── Cursor style in reverse mode ───────────────── */
-		map.on('mousemove', () => {
-			map.getCanvas().style.cursor = mapStore.isReverseMode ? 'crosshair' : '';
+		map.on('mousemove', (e) => {
+			const overPOI =
+				map.getLayer('poi-circles') &&
+				map.queryRenderedFeatures(e.point, { layers: ['poi-circles'] }).length > 0;
+			map.getCanvas().style.cursor = overPOI ? 'pointer' : mapStore.isReverseMode ? 'crosshair' : '';
 		});
 
 		pulseEl = createPulseMarker();

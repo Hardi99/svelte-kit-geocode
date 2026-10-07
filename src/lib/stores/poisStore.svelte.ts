@@ -1,4 +1,6 @@
 import { fetchPOIs, type POIFeature } from '$lib/api/pois';
+import { searchStore } from '$lib/stores/searchStore.svelte';
+import type { Lang } from '$lib/types';
 
 export type POICategory = 'food' | 'health' | 'bank' | 'transport' | 'shopping' | 'education';
 
@@ -19,14 +21,15 @@ export const RADIUS_OPTIONS = [300, 500, 1000] as const;
 export type RadiusOption = typeof RADIUS_OPTIONS[number];
 
 /* Converts POI array → GeoJSON FeatureCollection for MapLibre */
-export function toPOIGeoJSON(pois: POIFeature[]): GeoJSON.FeatureCollection {
+export function toPOIGeoJSON(pois: POIFeature[], lang: Lang): GeoJSON.FeatureCollection {
 	return {
 		type: 'FeatureCollection',
 		features: pois.map((p) => ({
 			type: 'Feature',
 			properties: {
 				id: p.id,
-				name: p.name,
+				/* Unnamed places fall back to their category label */
+				name: p.name ?? POI_CATEGORIES[p.category].label[lang],
 				category: p.category,
 				color: POI_CATEGORIES[p.category].color
 			},
@@ -55,7 +58,8 @@ class POIStore {
 	/* GeoJSON filtered by visible categories */
 	get geojson(): GeoJSON.FeatureCollection {
 		return toPOIGeoJSON(
-			this.pois.filter((p) => this.visibleCategories.includes(p.category))
+			this.pois.filter((p) => this.visibleCategories.includes(p.category)),
+			searchStore.lang
 		);
 	}
 

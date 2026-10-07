@@ -1,4 +1,4 @@
-import { POI_CATEGORIES, type POICategory } from '$lib/stores/poisStore.svelte';
+import type { POICategory } from '$lib/stores/poisStore.svelte';
 
 interface RawPlace {
 	id: string;
@@ -10,7 +10,7 @@ interface RawPlace {
 
 export interface POIFeature {
 	id: string;
-	name: string;
+	name?: string;
 	category: POICategory;
 	coordinates: [number, number];
 }
@@ -49,7 +49,7 @@ export async function fetchPOIs(
 			if (!category) return null;
 			return {
 				id: p.id,
-				name: p.name || POI_CATEGORIES[category].label.fr,
+				name: p.name,
 				category,
 				coordinates: [p.lon, p.lat] as [number, number]
 			};
