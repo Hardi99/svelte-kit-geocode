@@ -4,12 +4,13 @@ import type { RequestHandler } from './$types';
 
 const ALLOWED_RADII = [300, 500, 1000];
 
-/* One request per group, so dense categories (restaurants) can't crowd out the others */
+/* One request per group, so dense categories (restaurants) can't crowd out the others.
+   Explicit subcategories: broad parents ("healthcare") are several times slower on Geoapify */
 const CATEGORY_GROUPS = [
 	'catering.restaurant,catering.cafe,catering.fast_food,catering.bar,catering.pub',
-	'healthcare',
+	'healthcare.pharmacy,healthcare.hospital,healthcare.clinic_or_praxis,healthcare.dentist',
 	'service.financial.bank,service.financial.atm',
-	'public_transport',
+	'public_transport.bus,public_transport.subway,public_transport.train,public_transport.tram',
 	'commercial.supermarket,commercial.convenience,commercial.food_and_drink.bakery',
 	'education.school,education.university,education.college,education.library,childcare.kindergarten'
 ];
